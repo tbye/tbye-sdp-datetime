@@ -9,3 +9,7 @@ Plugin for the Elgato StreamDeck Family of Devices.  Display date, time, and seg
 ### Releases
 
 Version 1.0.0 now available at [https://tbye.com/projects/stream-deck-plugins/datetime/](https://tbye.com/projects/stream-deck-plugins/datetime/)
+
+### Thanks
+
+This project is inspired by [streamdeck-myip](https://github.com/Nuagic/streamdeck-myip)
