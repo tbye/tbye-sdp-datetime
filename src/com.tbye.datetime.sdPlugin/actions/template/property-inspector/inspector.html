@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8" />
+    <meta
+          name="viewport"
+          content="width=device-width,initial-scale=1,maximum-scale=1,minimum-scale=1,user-scalable=no,minimal-ui,viewport-fit=cover" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+    <title>com.tbye.datetime Property Inspector</title>
+    <link rel="stylesheet" href="../../../libs/css/sdpi.css" />
+    <link rel="stylesheet" href="inspector.css" />
+</head>
+
+<body> 
+    <div id="pi" class="sdpi-wrapper">
+        <div id="piwrap" style="display:none;">
+            <details class="message caution">
+                <summary>Leave title blank, but use the styles!</summary>
+                <p>If you enter a title, it will override the date/time format 
+                segment you've selected to display. However, the styles do
+                apply to the segments, so feel free to them.</p>
+                <p>Sure, if you want to call this a feature, then great!</p>
+            </details>
+            <form id="property_inspector">
+                <div class="sdpi-item">
+                    <div class="sdpi-item-label">Segment(s)</div>
+                    <select id="dtsegment" class="sdpi-item-value" name="dtsegment">
+                        <optgroup label="Compound Options">
+                            <option selected value="full">Date and Time</option>
+                            <option value="date">Date</option>
+                            <option value="date_no_year">Date (No Year)</option>
+                            <option value="time">Time</option>
+                            <option value="time_no_seconds">Time (No Seconds)</option>
+                            <option value="time_no_seconds_ampm">Time (No Seconds, No AM / PM)</option>
+                        </optgroup>
+                        <optgroup label="Date Options">
+                            <option value="day">Day</option>
+                            <option value="month">Month</option>
+                            <option value="month_name">Month Name</option>
+                            <option value="month_abbrev">Month Abbreviation</option>
+                            <option value="year">Year</option>
+                        <optgroup label="Time Options">
+                            <option value="hours_12">Hour (12)</option>
+                            <option value="hours_24">Hour (24)</option>
+                            <option value="minute">Minutes</option>
+                            <option value="second">Seconds</option>
+                            <option value="ampm">AM / PM</option>
+                        </optgroup>
+                    </select>
+                </div>
+            </form>
+        </div>
+    <div class="sdpi-info-label hidden" style="top: -1000" value=""></div>
+
+    <!-- Stream Deck Libs -->
+    <script src="../../../libs/js/constants.js"></script>
+    <script src="../../../libs/js/prototypes.js"></script>
+    <script src="../../../libs/js/timers.js"></script>
+    <script src="../../../libs/js/utils.js"></script>
+    <script src="../../../libs/js/events.js"></script>
+    <script src="../../../libs/js/api.js"></script>
+    <script src="../../../libs/js/property-inspector.js"></script>
+    <script src="../../../libs/js/dynamic-styles.js"></script>
+
+    <!-- Property Inspector Source -->
+    <script src="inspector.js"></script>
+</body>
+
+</html>

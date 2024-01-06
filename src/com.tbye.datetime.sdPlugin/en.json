@@ -1,0 +1,10 @@
+{
+  "Description": "Display dates, times and segments of dates and times.", 
+  "Name": "TBye DateTime", 
+  "Category": "TBye.com", 
+  "com.tbye.datetime.action": {
+    "Name": "DateTime", 
+    "Tooltip": "Display dates, times and segments of dates and times."
+  },
+  "Localization": {}
+}

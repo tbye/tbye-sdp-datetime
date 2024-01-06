@@ -1,0 +1,42 @@
+{
+	"SDKVersion": 2,
+	"Author": "Ty Bye",
+	"CodePath": "app.html",
+	"Description": "Display dates, times and segments of dates and times.",
+	"Name": "TBye DateTime",
+	"Icon": "actions/template/assets/plugin_icon",
+	"URL": "https://tbye.com/projects/stream-deck-plugins/datetime/",
+	"Version": "1.0.0",
+	"Software": {
+		"MinimumVersion": "6.0"
+	},
+	"OS": [
+		{
+			"Platform": "mac",
+			"MinimumVersion": "10.11"
+		},
+		{
+			"Platform": "windows",
+			"MinimumVersion": "10"
+		}
+	],
+	"Category": "TBye.com",
+	"CategoryIcon": "actions/template/assets/cat_icon",
+	"Actions": [
+		{
+			"Icon": "actions/template/assets/action_icon",
+			"Name": "DateTime Action",
+			"Controllers": ["Keypad"],
+			"States": [
+				{
+					"Image": "actions/template/assets/key_icon",
+					"TitleAlignment": "middle", 
+					"FontSize": "8"
+				}
+			],
+			"Tooltip": "TBye DateTime Plugin",
+			"UUID": "com.tbye.datetime.action",
+			"PropertyInspectorPath": "actions/template/property-inspector/inspector.html"
+		}
+	]
+}
