@@ -30,6 +30,7 @@ NOTE: Adding text to the title field will override the DateTime text, preventing
 
 Please create an [issue](https://github.com/tbye/tbye-sdp-datetime/issues/new) if there's anything I can help you with.
 
+
 ### Thanks
 
 This project is inspired by [streamdeck-myip](https://github.com/Nuagic/streamdeck-myip)
