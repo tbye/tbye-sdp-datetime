@@ -6,9 +6,11 @@ Plugin for the Elgato StreamDeck Family of Devices.  Display date, time, and seg
 - macOS Sonoma
 - Others may be supported.  These have been tested. YMMV
 
+
 ### Releases
 
-Version 1.0.0 now available at [https://github.com/tbye/tbye-sdp-datetime/releases/tag/1.0.0](https://github.com/tbye/tbye-sdp-datetime/releases/tag/1.0.0)
+Version 1.0.0 now available: [Download](https://github.com/tbye/tbye-sdp-datetime/releases/download/1.0.0/com.tbye.datetime.streamDeckPlugin)
+
 
 ### Installation
 
@@ -22,6 +24,7 @@ Version 1.0.0 now available at [https://github.com/tbye/tbye-sdp-datetime/releas
 1. Use the Title formatting styles to style the date segment.
 
 NOTE: Adding text to the title field will override the DateTime text, preventing display.
+
 
 ### Thanks
 
