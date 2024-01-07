@@ -1,6 +1,8 @@
 # tbye-sdp-datetime
 Plugin for the Elgato StreamDeck Family of Devices.  Display date, time, and segments of dates and times.
 
+<img src="/src/com.tbye.datetime.sdPlugin/actions/template/assets/preview.png" width="600">
+
 ### Supported OSes
 - Windows 11
 - macOS 14 (Sonoma)
