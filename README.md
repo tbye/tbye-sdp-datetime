@@ -3,7 +3,7 @@ Plugin for the Elgato StreamDeck Family of Devices.  Display date, time, and seg
 
 ### Supported OSes
 - Windows 11
-- macOS Sonoma
+- macOS 14 (Sonoma)
 - Others may be supported.  These have been tested. YMMV
 
 
