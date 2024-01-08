@@ -6,7 +6,7 @@
 	"Name": "DateTime Segments",
 	"Icon": "actions/template/assets/plugin_icon",
 	"URL": "https://tbye.com/projects/stream-deck-plugins/datetime/",
-	"Version": "1.0.0",
+	"Version": "1.0.1",
 	"Software": {
 		"MinimumVersion": "6.0"
 	},
