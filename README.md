@@ -25,8 +25,6 @@ Version 1.0.0 now available: [Download](https://github.com/tbye/tbye-sdp-datetim
 1. Choose the segments you'd like to display on the button.
 1. Use the Title formatting styles to style the date segment.
 
-NOTE: Adding text to the title field will override the DateTime text, preventing display.
-
 
 ### Issues, Support and Feedback Welcome!
 
