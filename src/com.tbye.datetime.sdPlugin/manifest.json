@@ -3,7 +3,7 @@
 	"Author": "Ty Bye",
 	"CodePath": "app.html",
 	"Description": "Display dates, times and segments of dates and times.",
-	"Name": "DateTime Segments",
+	"Name": "DateTime Composer",
 	"Icon": "actions/template/assets/plugin_icon",
 	"URL": "https://tbye.com/projects/stream-deck-plugins/datetime/",
 	"Version": "1.0.1",

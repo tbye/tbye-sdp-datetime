@@ -70,7 +70,7 @@ function formatDateTime(d, dtsegment){
 			txt = "" + d.toLocaleTimeString().replace(/:\d\d /, " ").replace(/ [AP]M/, "");
 			break;
 		case "day":
-			txt = "" + (d.getDate()+1).toString().padStart(2, "0");
+			txt = "" + (d.getDate()).toString().padStart(2, "0");
 			break;
 		case "month":
 			txt = "" + (d.getMonth()+1).toString().padStart(2, "0");
