@@ -11,8 +11,11 @@ Plugin for the Elgato StreamDeck Family of Devices.  Display date, time, and seg
 
 ### Releases
 
-Version 1.0.0 now available: [Download](https://github.com/tbye/tbye-sdp-datetime/releases/download/1.0.0/com.tbye.datetime.streamDeckPlugin)
+Version 1.0.2 now available: [Download](https://github.com/tbye/tbye-sdp-datetime/releases/download/1.0.2/com.tbye.datetime.streamDeckPlugin)
 
+Release Notes:
+1.0.2
+- Fixed issue #2.  Thanks T. J.
 
 ### Installation
 
