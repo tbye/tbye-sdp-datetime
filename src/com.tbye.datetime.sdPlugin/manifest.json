@@ -6,7 +6,7 @@
 	"Name": "DateTime Composer",
 	"Icon": "actions/template/assets/plugin_icon",
 	"URL": "https://tbye.com/projects/stream-deck-plugins/datetime/",
-	"Version": "1.0.1",
+	"Version": "1.0.2",
 	"Software": {
 		"MinimumVersion": "6.0"
 	},
