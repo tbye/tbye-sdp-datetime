@@ -11,7 +11,8 @@ function testGetOrdinalNumber() {
         { input: 13, expected: '13th' },
         { input: 21, expected: '21st' },
         { input: 22, expected: '22nd' },
-        { input: 23, expected: '23rd' },        { input: 31, expected: '31st' },
+        { input: 23, expected: '23rd' },
+        { input: 31, expected: '31st' },
         { input: 0, expected: '0th' }, // Optional: Handle invalid input
         { input: 32, expected: '32nd' } // Optional: Out-of-range input
     ];
