@@ -1,6 +1,8 @@
 /// <reference path="libs/js/action.js" />
 /// <reference path="libs/js/stream-deck.js" />
 
+// Check if we're running in Node.js environment
+const isNodeJS = typeof module !== 'undefined' && module.exports;
 
 const month_names = [
 	"January", "February", "March", "April", "May", "June", 
@@ -12,38 +14,41 @@ const month_abbrev = [
 	"Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
 ];
 
-const myAction = new Action('com.tbye.datetime.action');
-myAction.timeout_ids = {};
+// Only initialize Stream Deck plugin if not in Node.js environment
+let myAction;
+if (!isNodeJS && typeof Action !== 'undefined') {
+	myAction = new Action('com.tbye.datetime.action');
+	myAction.timeout_ids = {};
 
-myAction.onWillAppear(({ action, context, device, event, payload }) => {
-	// console.log("onWillAppear was called: context: " + JSON.stringify(context) + " payload: " + JSON.stringify(payload));
-	if(payload.settings != null && payload.settings.hasOwnProperty("dtsegment")){
-		updateTimer(context, payload.settings.dtsegment);
-	} else {
-		$SD.setSettings(context, {"dtsegment": "full"});
-		updateTimer(context, "full");
-	}
-});
+	myAction.onWillAppear(({ action, context, device, event, payload }) => {
+		// console.log("onWillAppear was called: context: " + JSON.stringify(context) + " payload: " + JSON.stringify(payload));
+		if(payload.settings != null && payload.settings.hasOwnProperty("dtsegment")){
+			updateTimer(context, payload.settings.dtsegment);
+		} else {
+			$SD.setSettings(context, {"dtsegment": "full"});
+			updateTimer(context, "full");
+		}
+	});
 
-
-myAction.onDidReceiveSettings(({ action, context, device, event, payload }) => {
-	// console.log("onDidReceiveSettings was called: context: " + context + " payload: " + JSON.stringify(payload));
-	updateTimer(context, payload.settings.dtsegment);
-});
-
+	myAction.onDidReceiveSettings(({ action, context, device, event, payload }) => {
+		// console.log("onDidReceiveSettings was called: context: " + context + " payload: " + JSON.stringify(payload));
+		updateTimer(context, payload.settings.dtsegment);	});
+}
 
 function updateTimer(context, dtsegment){
-	if(!dtsegment){
+	if(!isNodeJS && !dtsegment){
 		// console.log("updateTimer was called with no dtsegment");
 		return;
 	}
 	// console.log("updateTimer was called: " + dtsegment);
 	let d = new Date();
-	$SD.setTitle(context, formatDateTime(d, dtsegment));
-	if(myAction.timeout_ids[context]){
-		clearTimeout(myAction.timeout_ids[context]);
+	if (!isNodeJS && typeof $SD !== 'undefined') {
+		$SD.setTitle(context, formatDateTime(d, dtsegment));
+		if(myAction.timeout_ids[context]){
+			clearTimeout(myAction.timeout_ids[context]);
+		}
+		myAction.timeout_ids[context] = setTimeout(updateTimer, getTimeoutDelay(d, dtsegment), context, dtsegment);
 	}
-	myAction.timeout_ids[context] = setTimeout(updateTimer, getTimeoutDelay(d, dtsegment), context, dtsegment);
 }
 
 
@@ -71,6 +76,9 @@ function formatDateTime(d, dtsegment){
 			break;
 		case "day":
 			txt = "" + (d.getDate()).toString().padStart(2, "0");
+			break;
+		case "day_ordinal":
+			txt = getOrdinalNumber((d.getDate()).toString().padStart(2, "0"));
 			break;
 		case "month":
 			txt = "" + (d.getMonth()+1).toString().padStart(2, "0");
@@ -140,4 +148,16 @@ function getTimeoutDelay(d, dtsegment){
     		break;
 	}
 	return delay;
+}
+
+function getOrdinalNumber(day) {
+    const suffixes = ['th', 'st', 'nd', 'rd'];
+    const v = day % 10; // Get the last digit of the day
+    const suffix = (day % 100 >= 11 && day % 100 <= 13) ? suffixes[0] : (suffixes[v] || suffixes[0]);
+    return `${day}${suffix}`;
+}
+
+// Export for Node.js testing
+if (isNodeJS) {
+    module.exports = getOrdinalNumber;
 }
