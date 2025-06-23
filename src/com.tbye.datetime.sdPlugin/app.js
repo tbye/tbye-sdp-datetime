@@ -1,8 +1,8 @@
 /// <reference path="libs/js/action.js" />
 /// <reference path="libs/js/stream-deck.js" />
 
-// Check if we're running in Node.js environment
-const isNodeJS = typeof module !== 'undefined' && module.exports;
+// Check if we're running in Node.js environment (for testing)
+const isNodeJS = typeof module !== 'undefined' && typeof module.exports !== 'undefined';
 
 const month_names = [
 	"January", "February", "March", "April", "May", "June", 
@@ -17,6 +17,7 @@ const month_abbrev = [
 // Only initialize Stream Deck plugin if not in Node.js environment
 let myAction;
 if (!isNodeJS && typeof Action !== 'undefined') {
+	console.log('Initializing DateTime plugin...');
 	myAction = new Action('com.tbye.datetime.action');
 	myAction.timeout_ids = {};
 

@@ -1,14 +1,15 @@
 {
 	"SDKVersion": 2,
 	"Author": "Ty Bye",
+	"UUID": "com.tbye.datetime",
 	"CodePath": "app.html",
 	"Description": "Display dates, times and segments of dates and times.",
 	"Name": "DateTime Composer",
 	"Icon": "actions/template/assets/plugin_icon",
 	"URL": "https://tbye.com/projects/stream-deck-plugins/datetime/",
-	"Version": "1.0.2",
+	"Version": "1.0.2.1",
 	"Software": {
-		"MinimumVersion": "6.0"
+		"MinimumVersion": "6.4"
 	},
 	"OS": [
 		{
@@ -31,7 +32,7 @@
 				{
 					"Image": "actions/template/assets/key_icon",
 					"TitleAlignment": "middle", 
-					"FontSize": "8"
+					"FontSize": 8
 				}
 			],
 			"Tooltip": "DateTime Segments Plugin",
