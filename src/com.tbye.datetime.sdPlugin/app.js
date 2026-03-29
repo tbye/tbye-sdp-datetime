@@ -24,56 +24,115 @@ if (!isNodeJS && typeof Action !== 'undefined') {
 	myAction.onWillAppear(({ action, context, device, event, payload }) => {
 		// console.log("onWillAppear was called: context: " + JSON.stringify(context) + " payload: " + JSON.stringify(payload));
 		if(payload.settings != null && payload.settings.hasOwnProperty("dtsegment")){
-			updateTimer(context, payload.settings.dtsegment);
+			updateTimer(context, payload.settings);
 		} else {
-			$SD.setSettings(context, {"dtsegment": "full"});
-			updateTimer(context, "full");
+			const defaultSettings = {"dtsegment": "full", "dateformat": "locale", "hourformat": "locale"};
+			$SD.setSettings(context, defaultSettings);
+			updateTimer(context, defaultSettings);
 		}
 	});
 
 	myAction.onDidReceiveSettings(({ action, context, device, event, payload }) => {
 		// console.log("onDidReceiveSettings was called: context: " + context + " payload: " + JSON.stringify(payload));
-		updateTimer(context, payload.settings.dtsegment);	});
+		updateTimer(context, payload.settings);
+	});
 }
 
-function updateTimer(context, dtsegment){
-	if(!isNodeJS && !dtsegment){
-		// console.log("updateTimer was called with no dtsegment");
+function updateTimer(context, settings){
+	if(!isNodeJS && !settings){
+		// console.log("updateTimer was called with no settings");
 		return;
 	}
-	// console.log("updateTimer was called: " + dtsegment);
+	// console.log("updateTimer was called: " + JSON.stringify(settings));
+	const dtsegment = typeof settings === 'string' ? settings : settings.dtsegment;
 	let d = new Date();
 	if (!isNodeJS && typeof $SD !== 'undefined') {
-		$SD.setTitle(context, formatDateTime(d, dtsegment));
+		$SD.setTitle(context, formatDateTime(d, settings));
 		if(myAction.timeout_ids[context]){
 			clearTimeout(myAction.timeout_ids[context]);
 		}
-		myAction.timeout_ids[context] = setTimeout(updateTimer, getTimeoutDelay(d, dtsegment), context, dtsegment);
+		myAction.timeout_ids[context] = setTimeout(updateTimer, getTimeoutDelay(d, dtsegment), context, settings);
 	}
 }
 
 
-function formatDateTime(d, dtsegment){
+function formatDate(d, dateformat, includeYear) {
+	const day = d.getDate().toString().padStart(2, "0");
+	const month = (d.getMonth() + 1).toString().padStart(2, "0");
+	const year = d.getFullYear().toString();
+	switch(dateformat) {
+		case "mm_dd_yyyy":
+			return includeYear ? `${month}/${day}/${year}` : `${month}/${day}`;
+		case "dd_mm_yyyy":
+			return includeYear ? `${day}/${month}/${year}` : `${day}/${month}`;
+		case "yyyy_mm_dd":
+			return includeYear ? `${year}-${month}-${day}` : `${month}-${day}`;
+		default: // "locale"
+			return includeYear ? d.toLocaleDateString() : d.toLocaleDateString().replace(/\/\d\d\d\d/, "");
+	}
+}
+
+function formatTime(d, hourformat, showSeconds, showAmPm) {
+	const hours24 = d.getHours();
+	const hours12 = (hours24 % 12) || 12;
+	const minutes = d.getMinutes().toString().padStart(2, "0");
+	const seconds = d.getSeconds().toString().padStart(2, "0");
+	const ampm = hours24 < 12 ? "AM" : "PM";
+
+	if (hourformat === "12") {
+		let t = `${hours12.toString().padStart(2, "0")}:${minutes}`;
+		if (showSeconds) t += `:${seconds}`;
+		if (showAmPm) t += ` ${ampm}`;
+		return t;
+	} else if (hourformat === "24") {
+		let t = `${hours24.toString().padStart(2, "0")}:${minutes}`;
+		if (showSeconds) t += `:${seconds}`;
+		return t;
+	} else { // "locale"
+		let t = d.toLocaleTimeString();
+		if (!showSeconds) {
+			t = t.replace(/:\d{2}(\s+[AP]M)?$/i, "$1");
+		}
+		if (!showAmPm) {
+			t = t.replace(/\s*[AP]M$/i, "");
+		}
+		return t.trim();
+	}
+}
+
+function formatDateTime(d, settings){
 	if(!(d instanceof Date)){
 		return "";
+	}
+
+	// Support both old-style string and new-style settings object
+	let dtsegment, dateformat, hourformat;
+	if (typeof settings === 'string') {
+		dtsegment = settings;
+		dateformat = "locale";
+		hourformat = "locale";
+	} else {
+		dtsegment = settings.dtsegment;
+		dateformat = settings.dateformat || "locale";
+		hourformat = settings.hourformat || "locale";
 	}
 
 	let txt = "";
 	switch(dtsegment){
 		case "date":
-			txt =  "" + d.toLocaleDateString(); 
+			txt = formatDate(d, dateformat, true);
 			break;
 		case "date_no_year":
-			txt =  "" + d.toLocaleDateString().replace(/\/\d\d\d\d/, "");
+			txt = formatDate(d, dateformat, false);
 			break;
 		case "time":
-			txt = "" + d.toLocaleTimeString();
+			txt = formatTime(d, hourformat, true, true);
 			break;
 		case "time_no_seconds":
-			txt = "" + d.toLocaleTimeString().replace(/:\d\d /, " ");
+			txt = formatTime(d, hourformat, false, true);
 			break;
 		case "time_no_seconds_ampm":
-			txt = "" + d.toLocaleTimeString().replace(/:\d\d /, " ").replace(/ [AP]M/, "");
+			txt = formatTime(d, hourformat, false, false);
 			break;
 		case "day":
 			txt = "" + (d.getDate()).toString().padStart(2, "0");
@@ -97,7 +156,7 @@ function formatDateTime(d, dtsegment){
 			h = d.getHours();
 			if(h > 12){
 				h -= 12;
-			} 
+			}
 			txt = h.toString().padStart(2, "0");
 			break;
 		case "hours_24":
@@ -114,7 +173,7 @@ function formatDateTime(d, dtsegment){
 			break;
 		default: // handles "full"
 			// console.log("default case, full?");
-			txt =  "" + d.toLocaleDateString() + "\n" + d.toLocaleTimeString();
+			txt = formatDate(d, dateformat, true) + "\n" + formatTime(d, hourformat, true, true);
 			break;
 	}
 	return txt;
