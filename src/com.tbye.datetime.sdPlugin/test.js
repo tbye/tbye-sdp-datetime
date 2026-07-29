@@ -149,6 +149,50 @@ function testRegionFormat() {
 	allPassed = assertEqual('formatDate dd_mm_yyyy_dot', formatDate(mar27, 'dd_mm_yyyy_dot', true), '27.03.2026') && allPassed;
 	allPassed = assertEqual('formatDate d_m_yyyy_dot no year', formatDate(mar27, 'd_m_yyyy_dot', false), '27.3') && allPassed;
 
+	// issue #6 — locale date_no_year must not leave the year (any locale)
+	const year = mar27.getFullYear().toString();
+	const localeNoYear = formatDate(mar27, 'locale', false);
+	if (localeNoYear.includes(year)) {
+		console.error(`FAIL locale date_no_year still contains year ${year}: ${JSON.stringify(localeNoYear)}`);
+		allPassed = false;
+	} else {
+		console.log(`PASS locale date_no_year has no year: ${JSON.stringify(localeNoYear)}`);
+	}
+
+	// Old regex /\/\d\d\d\d/ fails on year-first (ja) and dotted (de) forms.
+	// Stub toLocaleDateString like ja-JP full date; no-year must use month/day options.
+	const originalToLocale = Date.prototype.toLocaleDateString;
+	Date.prototype.toLocaleDateString = function (locales, options) {
+		if (options && options.month != null && options.year == null) {
+			return '3/27'; // correct no-year via Intl options
+		}
+		return '2026/3/27'; // Japanese-style full date
+	};
+	try {
+		allPassed = assertEqual(
+			'locale no-year ignores year-first full string (#6)',
+			formatDate(mar27, 'locale', false),
+			'3/27'
+		) && allPassed;
+		// Old broken approach would leave the year:
+		const oldBroken = '2026/3/27'.replace(/\/\d\d\d\d/, '');
+		allPassed = assertEqual('old regex still broken on ja form', oldBroken, '2026/3/27') && allPassed;
+	} finally {
+		Date.prototype.toLocaleDateString = originalToLocale;
+	}
+
+	// Explicit formats already omit year; re-check date_no_year segment path
+	allPassed = assertEqual(
+		'date_no_year segment mm_dd',
+		formatDateTime(mar27, { dtsegment: 'date_no_year', dateformat: 'mm_dd_yyyy' }),
+		'03/27'
+	) && allPassed;
+	allPassed = assertEqual(
+		'date_no_year segment d_m_dot',
+		formatDateTime(mar27, { dtsegment: 'date_no_year', dateformat: 'd_m_yyyy_dot' }),
+		'27.3'
+	) && allPassed;
+
 	allPassed = assertEqual('formatTime 24h + sec', formatTime(d, '24', true, true), '15:04:07') && allPassed;
 	allPassed = assertEqual('formatTime 12h + sec + ampm', formatTime(d, '12', true, true), '03:04:07 PM') && allPassed;
 	allPassed = assertEqual('formatTime 12h no sec no ampm', formatTime(d, '12', false, false), '03:04') && allPassed;

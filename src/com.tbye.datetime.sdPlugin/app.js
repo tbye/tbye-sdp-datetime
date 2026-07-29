@@ -207,10 +207,11 @@ function formatDate(d, dateformat, includeYear) {
 				: `${dayNum}.${monthNum}`;
 		case "dd_mm_yyyy_dot":
 			return includeYear ? `${day}.${month}.${year}` : `${day}.${month}`;
-		default: // "locale"
+		default: // "locale" — use Intl options so year omission works for all locales
+			// (issue #6: regex /\/\d\d\d\d/ only matched US-style trailing /YYYY)
 			return includeYear
 				? d.toLocaleDateString()
-				: d.toLocaleDateString().replace(/\/\d\d\d\d/, "");
+				: d.toLocaleDateString(undefined, { month: "numeric", day: "numeric" });
 	}
 }
 
