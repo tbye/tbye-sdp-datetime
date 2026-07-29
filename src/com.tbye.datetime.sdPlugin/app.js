@@ -14,6 +14,15 @@ const month_abbrev = [
 	"Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
 ];
 
+// Sunday = 0 … Saturday = 6 (matches Date#getDay)
+const day_names = [
+	"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"
+];
+
+const day_abbrev = [
+	"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"
+];
+
 const DEFAULT_SETTINGS = {
 	dtsegment: "full",
 	dateformat: "locale",
@@ -277,6 +286,13 @@ function formatDateTime(d, settings) {
 		case "day_ordinal":
 			txt = getOrdinalNumber((d.getDate()).toString().padStart(2, "0"));
 			break;
+		case "day_name":
+			txt = day_names[d.getDay()];
+			break;
+		case "day_abbrev":
+			// e.g. Mon, Tue, Wed (issue #11)
+			txt = day_abbrev[d.getDay()];
+			break;
 		case "month":
 			txt = "" + (d.getMonth() + 1).toString().padStart(2, "0");
 			break;
@@ -344,6 +360,8 @@ function getTimeoutDelay(d, settingsOrSegment) {
 		case "hours_24":
 		case "day":
 		case "day_ordinal":
+		case "day_name":
+		case "day_abbrev":
 		case "date":
 		case "date_no_year":
 		case "month":

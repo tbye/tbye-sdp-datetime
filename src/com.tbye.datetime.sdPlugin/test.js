@@ -235,10 +235,28 @@ console.log('--- local hour ---');
 const f = testMsUntilNextLocalHour();
 console.log('--- region format (PR #15) ---');
 const g = testRegionFormat();
+function testDayName() {
+	// 2026-03-27 is a Friday
+	let allPassed = true;
+	const fri = new Date(2026, 2, 27, 12, 0, 0);
+	const mon = new Date(2026, 2, 23, 12, 0, 0); // Monday
+	const sun = new Date(2026, 2, 22, 12, 0, 0); // Sunday
+
+	allPassed = assertEqual('day_name Friday', formatDateTime(fri, 'day_name'), 'Friday') && allPassed;
+	allPassed = assertEqual('day_abbrev Friday', formatDateTime(fri, 'day_abbrev'), 'Fri') && allPassed;
+	allPassed = assertEqual('day_abbrev Monday (#11)', formatDateTime(mon, 'day_abbrev'), 'Mon') && allPassed;
+	allPassed = assertEqual('day_name Sunday', formatDateTime(sun, 'day_name'), 'Sunday') && allPassed;
+	allPassed = assertEqual('day_abbrev Sunday', formatDateTime(sun, 'day_abbrev'), 'Sun') && allPassed;
+
+	return allPassed;
+}
+
 console.log('--- ISO week number (issue #13) ---');
 const h = testISOWeekNumber();
+console.log('--- day name (issue #11) ---');
+const i = testDayName();
 
-if (a && b && c && d && e && f && g && h) {
+if (a && b && c && d && e && f && g && h && i) {
 	console.log('\nAll tests passed!');
 	process.exit(0);
 } else {
