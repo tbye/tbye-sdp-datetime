@@ -1,0 +1,12 @@
+# Dev / source files — not needed at runtime
+test.js
+**/*.sketch
+**/.DS_Store
+
+# SDK submodule metadata (js/css/assets are kept)
+libs/.git
+libs/.gitignore
+libs/.editorconfig
+libs/.prettierrc
+libs/README.md
+libs/package.json

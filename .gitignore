@@ -7,3 +7,6 @@ package-lock.json
 .history
 __exclude
 .editorconfig
+
+# Release artifacts (build with ./scripts/build-release.sh)
+/dist/

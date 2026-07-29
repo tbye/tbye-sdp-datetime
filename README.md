@@ -17,6 +17,16 @@ Release Notes:
 1.0.2
 - Fixed issue #2.  Thanks T. J.
 
+### Building a release (Linux-friendly)
+
+See **[RELEASE.md](RELEASE.md)** for the full packaging, GitHub release, and Elgato Marketplace workflow.
+
+```bash
+npm install -g @elgato/cli@latest
+git submodule update --init --recursive
+./scripts/build-release.sh          # → dist/com.tbye.datetime.streamDeckPlugin
+```
+
 ### Installation
 
 1. Download plugin to the mac or windows pc where your StreamDeck app is installed.
