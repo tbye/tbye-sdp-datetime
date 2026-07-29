@@ -5,66 +5,160 @@
 const isNodeJS = typeof module !== 'undefined' && typeof module.exports !== 'undefined';
 
 const month_names = [
-	"January", "February", "March", "April", "May", "June", 
+	"January", "February", "March", "April", "May", "June",
 	"July", "August", "September", "October", "November", "December"
 ];
 
 const month_abbrev = [
-	"Jan", "Feb", "Mar", "Apr", "May", "Jun", 
+	"Jan", "Feb", "Mar", "Apr", "May", "Jun",
 	"Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
 ];
+
+// Active button instances: context -> dtsegment
+const activeContexts = {};
+let sharedTickTimeoutId = null;
 
 // Only initialize Stream Deck plugin if not in Node.js environment
 let myAction;
 if (!isNodeJS && typeof Action !== 'undefined') {
 	console.log('Initializing DateTime plugin...');
 	myAction = new Action('com.tbye.datetime.action');
-	myAction.timeout_ids = {};
 
 	myAction.onWillAppear(({ action, context, device, event, payload }) => {
-		// console.log("onWillAppear was called: context: " + JSON.stringify(context) + " payload: " + JSON.stringify(payload));
-		if(payload.settings != null && payload.settings.hasOwnProperty("dtsegment")){
-			updateTimer(context, payload.settings.dtsegment);
-		} else {
+		const segment = (payload.settings && payload.settings.dtsegment)
+			? payload.settings.dtsegment
+			: "full";
+		if (!payload.settings || !payload.settings.dtsegment) {
 			$SD.setSettings(context, {"dtsegment": "full"});
-			updateTimer(context, "full");
 		}
+		registerContext(context, segment);
+	});
+
+	myAction.onWillDisappear(({ context }) => {
+		unregisterContext(context);
 	});
 
 	myAction.onDidReceiveSettings(({ action, context, device, event, payload }) => {
-		// console.log("onDidReceiveSettings was called: context: " + context + " payload: " + JSON.stringify(payload));
-		updateTimer(context, payload.settings.dtsegment);	});
+		registerContext(context, payload.settings.dtsegment);
+	});
 }
 
-function updateTimer(context, dtsegment){
-	if(!isNodeJS && !dtsegment){
-		// console.log("updateTimer was called with no dtsegment");
+/**
+ * Register (or re-register) a button context and paint it immediately
+ * from the same wall clock used by every other tile.
+ */
+function registerContext(context, dtsegment) {
+	if (!dtsegment) {
 		return;
 	}
-	// console.log("updateTimer was called: " + dtsegment);
-	let d = new Date();
+	activeContexts[context] = dtsegment;
 	if (!isNodeJS && typeof $SD !== 'undefined') {
-		$SD.setTitle(context, formatDateTime(d, dtsegment));
-		if(myAction.timeout_ids[context]){
-			clearTimeout(myAction.timeout_ids[context]);
-		}
-		myAction.timeout_ids[context] = setTimeout(updateTimer, getTimeoutDelay(d, dtsegment), context, dtsegment);
+		// Immediate paint so the key isn't blank until the next tick
+		$SD.setTitle(context, formatDateTime(new Date(), dtsegment));
+		ensureSharedTick();
 	}
 }
 
+function unregisterContext(context) {
+	delete activeContexts[context];
+	if (Object.keys(activeContexts).length === 0 && sharedTickTimeoutId != null) {
+		clearTimeout(sharedTickTimeoutId);
+		sharedTickTimeoutId = null;
+	}
+}
 
-function formatDateTime(d, dtsegment){
-	if(!(d instanceof Date)){
+/**
+ * Milliseconds until the next whole-second boundary on the wall clock.
+ * Always returns a value in 1..1000 so setTimeout never gets 0.
+ */
+function msUntilNextSecond(nowMs) {
+	const now = (typeof nowMs === 'number') ? nowMs : Date.now();
+	const intoSecond = now % 1000;
+	return intoSecond === 0 ? 1000 : (1000 - intoSecond);
+}
+
+/**
+ * Milliseconds until the next whole-minute boundary on the wall clock.
+ * Always returns a value in 1..60000.
+ */
+function msUntilNextMinute(nowMs) {
+	const now = (typeof nowMs === 'number') ? nowMs : Date.now();
+	const intoMinute = now % 60000;
+	return intoMinute === 0 ? 60000 : (60000 - intoMinute);
+}
+
+/**
+ * Milliseconds until the next local-hour boundary (handles DST correctly
+ * by using calendar fields, not epoch modulo).
+ */
+function msUntilNextLocalHour(d) {
+	const date = (d instanceof Date) ? d : new Date(d);
+	const next = new Date(date.getTime());
+	next.setSeconds(0, 0);
+	next.setMinutes(0);
+	next.setHours(next.getHours() + 1);
+	const delay = next.getTime() - date.getTime();
+	return delay <= 0 ? 1 : delay;
+}
+
+function ensureSharedTick() {
+	if (sharedTickTimeoutId != null) {
+		return;
+	}
+	scheduleSharedTick();
+}
+
+function scheduleSharedTick() {
+	if (sharedTickTimeoutId != null) {
+		clearTimeout(sharedTickTimeoutId);
+	}
+	// Align every fire to the next wall-clock second. Recomputing from
+	// Date.now() each time prevents setTimeout drift from accumulating.
+	const delay = msUntilNextSecond();
+	sharedTickTimeoutId = setTimeout(onSharedTick, delay);
+}
+
+function onSharedTick() {
+	sharedTickTimeoutId = null;
+	const contexts = Object.keys(activeContexts);
+	if (contexts.length === 0) {
+		return;
+	}
+
+	// ONE Date for every tile this tick — multi-tile clocks stay in lockstep.
+	// Always paint every active context (even minute/hour segments). A few
+	// setTitle calls per second is cheap, and it means a late/skipped tick
+	// after sleep still converges on the correct value on the next fire.
+	const d = new Date();
+	for (let i = 0; i < contexts.length; i++) {
+		const context = contexts[i];
+		const segment = activeContexts[context];
+		if (typeof $SD !== 'undefined') {
+			$SD.setTitle(context, formatDateTime(d, segment));
+		}
+	}
+
+	scheduleSharedTick();
+}
+
+// Back-compat entry point used by older call sites / mental model.
+// Prefer registerContext for new code.
+function updateTimer(context, dtsegment) {
+	registerContext(context, dtsegment);
+}
+
+function formatDateTime(d, dtsegment) {
+	if (!(d instanceof Date)) {
 		return "";
 	}
 
 	let txt = "";
-	switch(dtsegment){
+	switch (dtsegment) {
 		case "date":
-			txt =  "" + d.toLocaleDateString(); 
+			txt = "" + d.toLocaleDateString();
 			break;
 		case "date_no_year":
-			txt =  "" + d.toLocaleDateString().replace(/\/\d\d\d\d/, "");
+			txt = "" + d.toLocaleDateString().replace(/\/\d\d\d\d/, "");
 			break;
 		case "time":
 			txt = "" + d.toLocaleTimeString();
@@ -82,7 +176,7 @@ function formatDateTime(d, dtsegment){
 			txt = getOrdinalNumber((d.getDate()).toString().padStart(2, "0"));
 			break;
 		case "month":
-			txt = "" + (d.getMonth()+1).toString().padStart(2, "0");
+			txt = "" + (d.getMonth() + 1).toString().padStart(2, "0");
 			break;
 		case "month_name":
 			txt = month_names[d.getMonth()];
@@ -93,13 +187,14 @@ function formatDateTime(d, dtsegment){
 		case "year":
 			txt = "" + d.getFullYear();
 			break;
-		case "hours_12":
-			h = d.getHours();
-			if(h > 12){
-				h -= 12;
-			} 
+		case "hours_12": {
+			let h = d.getHours() % 12;
+			if (h === 0) {
+				h = 12;
+			}
 			txt = h.toString().padStart(2, "0");
 			break;
+		}
 		case "hours_24":
 			txt = "" + (d.getHours()).toString().padStart(2, "0");
 			break;
@@ -113,52 +208,60 @@ function formatDateTime(d, dtsegment){
 			txt = d.getHours() < 12 ? "AM" : "PM";
 			break;
 		default: // handles "full"
-			// console.log("default case, full?");
-			txt =  "" + d.toLocaleDateString() + "\n" + d.toLocaleTimeString();
+			txt = "" + d.toLocaleDateString() + "\n" + d.toLocaleTimeString();
 			break;
 	}
 	return txt;
 }
 
-
-function getTimeoutDelay(d, dtsegment){
-	let now = d.getTime(); // current time in milliseconds
-	let delay = 1000;
-	switch(dtsegment){
+/**
+ * Delay until the next meaningful boundary for a segment.
+ * Kept for tests and any future per-context scheduling; the live plugin
+ * uses the shared second tick instead.
+ */
+function getTimeoutDelay(d, dtsegment) {
+	const now = d.getTime();
+	switch (dtsegment) {
 		case "second":
 		case "time":
 		case "full":
-			// All show seconds so we update every second
-			delay = 1000;
-			break;
+			return msUntilNextSecond(now);
 		case "minute":
-			const oneMinute = 60 * 1000; // one minute in milliseconds
-			delay = oneMinute - (now % oneMinute); // time until next minute
-			break;
+		case "time_no_seconds":
+		case "time_no_seconds_ampm":
+			return msUntilNextMinute(now);
 		case "hours_12":
 		case "hours_24":
 		case "day":
+		case "day_ordinal":
+		case "date":
+		case "date_no_year":
 		case "month":
 		case "month_name":
 		case "month_abbrev":
 		case "year":
 		case "ampm":
-			// everything should try and update every hour - currently elapsed milliseconds	
-			const oneHour = 60 * 60 * 1000; // one hour in milliseconds
-    		delay = oneHour - (now % oneHour); // time until next hour
-    		break;
+			return msUntilNextLocalHour(d);
+		default:
+			return msUntilNextSecond(now);
 	}
-	return delay;
 }
 
 function getOrdinalNumber(day) {
-    const suffixes = ['th', 'st', 'nd', 'rd'];
-    const v = day % 10; // Get the last digit of the day
-    const suffix = (day % 100 >= 11 && day % 100 <= 13) ? suffixes[0] : (suffixes[v] || suffixes[0]);
-    return `${day}${suffix}`;
+	const suffixes = ['th', 'st', 'nd', 'rd'];
+	const v = day % 10; // Get the last digit of the day
+	const suffix = (day % 100 >= 11 && day % 100 <= 13) ? suffixes[0] : (suffixes[v] || suffixes[0]);
+	return `${day}${suffix}`;
 }
 
 // Export for Node.js testing
 if (isNodeJS) {
-    module.exports = getOrdinalNumber;
+	module.exports = {
+		getOrdinalNumber,
+		formatDateTime,
+		getTimeoutDelay,
+		msUntilNextSecond,
+		msUntilNextMinute,
+		msUntilNextLocalHour
+	};
 }
