@@ -11,9 +11,21 @@ Plugin for the Elgato StreamDeck Family of Devices.  Display date, time, and seg
 
 ### Releases
 
-Version 1.0.2 now available: [Download](https://github.com/tbye/tbye-sdp-datetime/releases/download/1.0.2/com.tbye.datetime.streamDeckPlugin)
+Version **1.1.0** (packaged for smoke test / upcoming release). Previous: [1.0.2](https://github.com/tbye/tbye-sdp-datetime/releases/download/1.0.2/com.tbye.datetime.streamDeckPlugin).
 
 Release Notes:
+1.1.0
+- Shared wall-clock tick so multi-tile clocks stay in sync (#16)
+- Region date/hour formats + D.M.YYYY / DD.MM.YYYY (#14, PR #15)
+- ISO 8601 week number (#4, #13)
+- Day name / abbreviation (#11)
+- Language selection for localized day/month names (#7)
+- Copy current value to clipboard on key press; multi-action friendly (#5)
+- Date (No Year) fixed for non-US locales (#6)
+- Time without seconds fixed for 24h / non-US locales (#10, #12)
+- Default title font size raised to 16 (#8)
+- Linux-friendly release packaging (`scripts/build-release.sh`)
+
 1.0.2
 - Fixed issue #2.  Thanks T. J.
 

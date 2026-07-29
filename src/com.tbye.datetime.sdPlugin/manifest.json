@@ -7,7 +7,7 @@
 	"Name": "DateTime Composer",
 	"Icon": "actions/template/assets/plugin_icon",
 	"URL": "https://tbye.com/projects/stream-deck-plugins/datetime/",
-	"Version": "1.0.2.1",
+	"Version": "1.1.0.0",
 	"Software": {
 		"MinimumVersion": "6.4"
 	},
@@ -27,7 +27,9 @@
 		{
 			"Icon": "actions/template/assets/action_icon",
 			"Name": "DateTime Action",
-			"Controllers": ["Keypad"],
+			"Controllers": [
+				"Keypad"
+			],
 			"States": [
 				{
 					"Image": "actions/template/assets/key_icon",
