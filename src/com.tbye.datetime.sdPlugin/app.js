@@ -289,6 +289,10 @@ function formatDateTime(d, settings) {
 		case "year":
 			txt = "" + d.getFullYear();
 			break;
+		case "week_iso":
+			// ISO 8601 week number (1–53), zero-padded
+			txt = getISOWeekNumber(d).toString().padStart(2, "0");
+			break;
 		case "hours_12": {
 			let h = d.getHours() % 12;
 			if (h === 0) {
@@ -346,6 +350,7 @@ function getTimeoutDelay(d, settingsOrSegment) {
 		case "month_name":
 		case "month_abbrev":
 		case "year":
+		case "week_iso":
 		case "ampm":
 			return msUntilNextLocalHour(d);
 		default:
@@ -360,10 +365,27 @@ function getOrdinalNumber(day) {
 	return `${day}${suffix}`;
 }
 
+/**
+ * ISO 8601 week number (1–53).
+ * Weeks start on Monday; week 1 is the week that contains the year's first Thursday
+ * (equivalently, the week containing 4 January).
+ * @see https://en.wikipedia.org/wiki/ISO_week_date
+ */
+function getISOWeekNumber(d) {
+	// Work in UTC from Y-M-D so local DST does not shift the calendar day
+	const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+	// ISO: Sunday=7; set to nearest Thursday (which defines the ISO week-year)
+	const dayNum = date.getUTCDay() || 7;
+	date.setUTCDate(date.getUTCDate() + 4 - dayNum);
+	const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
+	return Math.ceil((((date - yearStart) / 86400000) + 1) / 7);
+}
+
 // Export for Node.js testing
 if (isNodeJS) {
 	module.exports = {
 		getOrdinalNumber,
+		getISOWeekNumber,
 		formatDateTime,
 		formatDate,
 		formatTime,

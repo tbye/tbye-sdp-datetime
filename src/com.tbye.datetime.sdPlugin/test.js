@@ -1,5 +1,6 @@
 const {
 	getOrdinalNumber,
+	getISOWeekNumber,
 	formatDateTime,
 	formatDate,
 	formatTime,
@@ -178,6 +179,48 @@ function testRegionFormat() {
 	return allPassed;
 }
 
+function testISOWeekNumber() {
+	// Known ISO week values (local calendar Y-M-D, algorithm uses those fields)
+	let allPassed = true;
+	const cases = [
+		// Jan 1 2026 is Thursday → week 1
+		{ d: new Date(2026, 0, 1), week: 1 },
+		// Jan 4 is always in week 1
+		{ d: new Date(2026, 0, 4), week: 1 },
+		// 2026-03-26 (around issue #13) — Thursday of week 13
+		{ d: new Date(2026, 2, 26), week: 13 },
+		// Dec 28 2026 is Monday → week 53 of 2026
+		{ d: new Date(2026, 11, 28), week: 53 },
+		// Jan 1 2015 Thursday → week 1
+		{ d: new Date(2015, 0, 1), week: 1 },
+		// Dec 31 2015 Thursday → week 53 of 2015
+		{ d: new Date(2015, 11, 31), week: 53 },
+		// Jan 1 2016 Friday → still week 53 of 2015 (ISO week-year)
+		{ d: new Date(2016, 0, 1), week: 53 },
+		// Jan 4 2016 Monday → week 1 of 2016
+		{ d: new Date(2016, 0, 4), week: 1 }
+	];
+	cases.forEach(({ d, week }) => {
+		const got = getISOWeekNumber(d);
+		const label = `ISO week ${d.toISOString().slice(0, 10)}`;
+		if (!assertEqual(label, got, week)) {
+			allPassed = false;
+		}
+	});
+	// Segment formatting is zero-padded
+	allPassed = assertEqual(
+		'week_iso segment pad',
+		formatDateTime(new Date(2026, 2, 26), 'week_iso'),
+		'13'
+	) && allPassed;
+	allPassed = assertEqual(
+		'week_iso segment pad week 1',
+		formatDateTime(new Date(2026, 0, 1), 'week_iso'),
+		'01'
+	) && allPassed;
+	return allPassed;
+}
+
 console.log('--- ordinal ---');
 const a = testGetOrdinalNumber();
 console.log('--- msUntilNextSecond ---');
@@ -192,8 +235,10 @@ console.log('--- local hour ---');
 const f = testMsUntilNextLocalHour();
 console.log('--- region format (PR #15) ---');
 const g = testRegionFormat();
+console.log('--- ISO week number (issue #13) ---');
+const h = testISOWeekNumber();
 
-if (a && b && c && d && e && f && g) {
+if (a && b && c && d && e && f && g && h) {
 	console.log('\nAll tests passed!');
 	process.exit(0);
 } else {
