@@ -4,29 +4,12 @@
 // Check if we're running in Node.js environment (for testing)
 const isNodeJS = typeof module !== 'undefined' && typeof module.exports !== 'undefined';
 
-const month_names = [
-	"January", "February", "March", "April", "May", "June",
-	"July", "August", "September", "October", "November", "December"
-];
-
-const month_abbrev = [
-	"Jan", "Feb", "Mar", "Apr", "May", "Jun",
-	"Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
-];
-
-// Sunday = 0 … Saturday = 6 (matches Date#getDay)
-const day_names = [
-	"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"
-];
-
-const day_abbrev = [
-	"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"
-];
-
 const DEFAULT_SETTINGS = {
 	dtsegment: "full",
 	dateformat: "locale",
-	hourformat: "locale"
+	hourformat: "locale",
+	// "locale" = host system language; otherwise a BCP 47 tag (issue #7)
+	language: "locale"
 };
 
 // Active button instances: context -> normalized settings object
@@ -84,14 +67,73 @@ function normalizeSettings(settings) {
 		return {
 			dtsegment: settings,
 			dateformat: DEFAULT_SETTINGS.dateformat,
-			hourformat: DEFAULT_SETTINGS.hourformat
+			hourformat: DEFAULT_SETTINGS.hourformat,
+			language: DEFAULT_SETTINGS.language
 		};
 	}
 	return {
 		dtsegment: settings.dtsegment || DEFAULT_SETTINGS.dtsegment,
 		dateformat: settings.dateformat || DEFAULT_SETTINGS.dateformat,
-		hourformat: settings.hourformat || DEFAULT_SETTINGS.hourformat
+		hourformat: settings.hourformat || DEFAULT_SETTINGS.hourformat,
+		language: settings.language || DEFAULT_SETTINGS.language
 	};
+}
+
+/**
+ * Resolve settings.language to an Intl locale argument.
+ * "locale" / empty → undefined (runtime default language).
+ */
+function resolveLocale(language) {
+	if (!language || language === "locale" || language === "system") {
+		return undefined;
+	}
+	return language;
+}
+
+/**
+ * Localized weekday name via Intl (issue #7).
+ * @param {"long"|"short"|"narrow"} style
+ */
+function formatWeekday(d, language, style) {
+	const locale = resolveLocale(language);
+	try {
+		return new Intl.DateTimeFormat(locale, { weekday: style || "long" }).format(d);
+	} catch (e) {
+		return new Intl.DateTimeFormat(undefined, { weekday: style || "long" }).format(d);
+	}
+}
+
+/**
+ * Localized month name via Intl (issue #7).
+ * @param {"long"|"short"|"narrow"|"numeric"|"2-digit"} style
+ */
+function formatMonthName(d, language, style) {
+	const locale = resolveLocale(language);
+	try {
+		return new Intl.DateTimeFormat(locale, { month: style || "long" }).format(d);
+	} catch (e) {
+		return new Intl.DateTimeFormat(undefined, { month: style || "long" }).format(d);
+	}
+}
+
+/**
+ * Localized AM/PM (or locale dayPeriod) via Intl.
+ */
+function formatAmPm(d, language) {
+	const locale = resolveLocale(language);
+	try {
+		const parts = new Intl.DateTimeFormat(locale, {
+			hour: "numeric",
+			hour12: true
+		}).formatToParts(d);
+		const period = parts.find((p) => p.type === "dayPeriod");
+		if (period && period.value) {
+			return period.value;
+		}
+	} catch (e) {
+		// fall through
+	}
+	return d.getHours() < 12 ? "AM" : "PM";
 }
 
 /**
@@ -272,13 +314,15 @@ function showAlert(context) {
 
 /**
  * Explicit date layout (region format). Ported from PR #15 by @lupus2k.
+ * @param {string} [language] settings.language — affects "locale" dateformat only
  */
-function formatDate(d, dateformat, includeYear) {
+function formatDate(d, dateformat, includeYear, language) {
 	const dayNum = d.getDate();
 	const monthNum = d.getMonth() + 1;
 	const day = dayNum.toString().padStart(2, "0");
 	const month = monthNum.toString().padStart(2, "0");
 	const year = d.getFullYear().toString();
+	const locale = resolveLocale(language);
 	switch (dateformat) {
 		case "mm_dd_yyyy":
 			return includeYear ? `${month}/${day}/${year}` : `${month}/${day}`;
@@ -295,21 +339,29 @@ function formatDate(d, dateformat, includeYear) {
 			return includeYear ? `${day}.${month}.${year}` : `${day}.${month}`;
 		default: // "locale" — use Intl options so year omission works for all locales
 			// (issue #6: regex /\/\d\d\d\d/ only matched US-style trailing /YYYY)
-			return includeYear
-				? d.toLocaleDateString()
-				: d.toLocaleDateString(undefined, { month: "numeric", day: "numeric" });
+			try {
+				return includeYear
+					? d.toLocaleDateString(locale)
+					: d.toLocaleDateString(locale, { month: "numeric", day: "numeric" });
+			} catch (e) {
+				return includeYear
+					? d.toLocaleDateString()
+					: d.toLocaleDateString(undefined, { month: "numeric", day: "numeric" });
+			}
 	}
 }
 
 /**
  * Explicit time layout (region format). Ported from PR #15 by @lupus2k.
+ * @param {string} [language] settings.language — affects "locale" hourformat and AM/PM
  */
-function formatTime(d, hourformat, showSeconds, showAmPm) {
+function formatTime(d, hourformat, showSeconds, showAmPm, language) {
 	const hours24 = d.getHours();
 	const hours12 = (hours24 % 12) || 12;
 	const minutes = d.getMinutes().toString().padStart(2, "0");
 	const seconds = d.getSeconds().toString().padStart(2, "0");
-	const ampm = hours24 < 12 ? "AM" : "PM";
+	const ampm = formatAmPm(d, language);
+	const locale = resolveLocale(language);
 
 	if (hourformat === "12") {
 		let t = `${hours12.toString().padStart(2, "0")}:${minutes}`;
@@ -329,8 +381,14 @@ function formatTime(d, hourformat, showSeconds, showAmPm) {
 		return t;
 	}
 	// "locale"
-	let t = d.toLocaleTimeString();
+	let t;
+	try {
+		t = d.toLocaleTimeString(locale);
+	} catch (e) {
+		t = d.toLocaleTimeString();
+	}
 	if (!showSeconds) {
+		// Strip trailing :SS or :SS before AM/PM (same robust pattern as #10/#12)
 		t = t.replace(/:\d{2}(\s+[AP]M)?$/i, "$1");
 	}
 	if (!showAmPm) {
@@ -348,24 +406,24 @@ function formatDateTime(d, settings) {
 		return "";
 	}
 
-	const { dtsegment, dateformat, hourformat } = normalizeSettings(settings);
+	const { dtsegment, dateformat, hourformat, language } = normalizeSettings(settings);
 
 	let txt = "";
 	switch (dtsegment) {
 		case "date":
-			txt = formatDate(d, dateformat, true);
+			txt = formatDate(d, dateformat, true, language);
 			break;
 		case "date_no_year":
-			txt = formatDate(d, dateformat, false);
+			txt = formatDate(d, dateformat, false, language);
 			break;
 		case "time":
-			txt = formatTime(d, hourformat, true, true);
+			txt = formatTime(d, hourformat, true, true, language);
 			break;
 		case "time_no_seconds":
-			txt = formatTime(d, hourformat, false, true);
+			txt = formatTime(d, hourformat, false, true, language);
 			break;
 		case "time_no_seconds_ampm":
-			txt = formatTime(d, hourformat, false, false);
+			txt = formatTime(d, hourformat, false, false, language);
 			break;
 		case "day":
 			txt = "" + (d.getDate()).toString().padStart(2, "0");
@@ -374,20 +432,20 @@ function formatDateTime(d, settings) {
 			txt = getOrdinalNumber((d.getDate()).toString().padStart(2, "0"));
 			break;
 		case "day_name":
-			txt = day_names[d.getDay()];
+			txt = formatWeekday(d, language, "long");
 			break;
 		case "day_abbrev":
-			// e.g. Mon, Tue, Wed (issue #11)
-			txt = day_abbrev[d.getDay()];
+			// e.g. Mon, Tue, Wed (issue #11) — localized (issue #7)
+			txt = formatWeekday(d, language, "short");
 			break;
 		case "month":
 			txt = "" + (d.getMonth() + 1).toString().padStart(2, "0");
 			break;
 		case "month_name":
-			txt = month_names[d.getMonth()];
+			txt = formatMonthName(d, language, "long");
 			break;
 		case "month_abbrev":
-			txt = month_abbrev[d.getMonth()];
+			txt = formatMonthName(d, language, "short");
 			break;
 		case "year":
 			txt = "" + d.getFullYear();
@@ -414,10 +472,11 @@ function formatDateTime(d, settings) {
 			txt = "" + d.getSeconds().toString().padStart(2, "0");
 			break;
 		case "ampm":
-			txt = d.getHours() < 12 ? "AM" : "PM";
+			txt = formatAmPm(d, language);
 			break;
 		default: // handles "full"
-			txt = formatDate(d, dateformat, true) + "\n" + formatTime(d, hourformat, true, true);
+			txt = formatDate(d, dateformat, true, language) + "\n"
+				+ formatTime(d, hourformat, true, true, language);
 			break;
 	}
 	return txt;
@@ -494,6 +553,10 @@ if (isNodeJS) {
 		formatDateTime,
 		formatDate,
 		formatTime,
+		formatWeekday,
+		formatMonthName,
+		formatAmPm,
+		resolveLocale,
 		normalizeSettings,
 		getClipboardText,
 		copyTextToClipboard,

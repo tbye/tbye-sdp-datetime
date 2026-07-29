@@ -4,6 +4,8 @@ const {
 	formatDateTime,
 	formatDate,
 	formatTime,
+	formatWeekday,
+	formatMonthName,
 	normalizeSettings,
 	getClipboardText,
 	getTimeoutDelay,
@@ -281,17 +283,70 @@ const f = testMsUntilNextLocalHour();
 console.log('--- region format (PR #15) ---');
 const g = testRegionFormat();
 function testDayName() {
-	// 2026-03-27 is a Friday
+	// 2026-03-27 is a Friday — pin language to English for stable asserts
 	let allPassed = true;
 	const fri = new Date(2026, 2, 27, 12, 0, 0);
 	const mon = new Date(2026, 2, 23, 12, 0, 0); // Monday
 	const sun = new Date(2026, 2, 22, 12, 0, 0); // Sunday
+	const en = { language: 'en' };
 
-	allPassed = assertEqual('day_name Friday', formatDateTime(fri, 'day_name'), 'Friday') && allPassed;
-	allPassed = assertEqual('day_abbrev Friday', formatDateTime(fri, 'day_abbrev'), 'Fri') && allPassed;
-	allPassed = assertEqual('day_abbrev Monday (#11)', formatDateTime(mon, 'day_abbrev'), 'Mon') && allPassed;
-	allPassed = assertEqual('day_name Sunday', formatDateTime(sun, 'day_name'), 'Sunday') && allPassed;
-	allPassed = assertEqual('day_abbrev Sunday', formatDateTime(sun, 'day_abbrev'), 'Sun') && allPassed;
+	allPassed = assertEqual('day_name Friday', formatDateTime(fri, { dtsegment: 'day_name', ...en }), 'Friday') && allPassed;
+	allPassed = assertEqual('day_abbrev Friday', formatDateTime(fri, { dtsegment: 'day_abbrev', ...en }), 'Fri') && allPassed;
+	allPassed = assertEqual('day_abbrev Monday (#11)', formatDateTime(mon, { dtsegment: 'day_abbrev', ...en }), 'Mon') && allPassed;
+	allPassed = assertEqual('day_name Sunday', formatDateTime(sun, { dtsegment: 'day_name', ...en }), 'Sunday') && allPassed;
+	allPassed = assertEqual('day_abbrev Sunday', formatDateTime(sun, { dtsegment: 'day_abbrev', ...en }), 'Sun') && allPassed;
+
+	return allPassed;
+}
+
+function testLanguage() {
+	// Issue #7 — localized day/month names via Language setting
+	let allPassed = true;
+	const fri = new Date(2026, 2, 27, 12, 0, 0); // Friday, March
+
+	allPassed = assertEqual(
+		'day_name tr',
+		formatDateTime(fri, { dtsegment: 'day_name', language: 'tr' }),
+		'Cuma'
+	) && allPassed;
+	allPassed = assertEqual(
+		'day_name de',
+		formatDateTime(fri, { dtsegment: 'day_name', language: 'de' }),
+		'Freitag'
+	) && allPassed;
+	allPassed = assertEqual(
+		'day_abbrev de',
+		formatDateTime(fri, { dtsegment: 'day_abbrev', language: 'de' }),
+		'Fr'
+	) && allPassed;
+	allPassed = assertEqual(
+		'month_name tr',
+		formatDateTime(fri, { dtsegment: 'month_name', language: 'tr' }),
+		'Mart'
+	) && allPassed;
+	allPassed = assertEqual(
+		'month_name de',
+		formatDateTime(fri, { dtsegment: 'month_name', language: 'de' }),
+		'März'
+	) && allPassed;
+	allPassed = assertEqual(
+		'month_name en',
+		formatDateTime(fri, { dtsegment: 'month_name', language: 'en' }),
+		'March'
+	) && allPassed;
+
+	// formatWeekday / formatMonthName helpers
+	allPassed = assertEqual('formatWeekday pl long', formatWeekday(fri, 'pl', 'long'), 'piątek') && allPassed;
+	allPassed = assertEqual('formatMonthName ja', formatMonthName(fri, 'ja', 'long'), '3月') && allPassed;
+
+	// normalizeSettings carries language
+	const norm = normalizeSettings({ dtsegment: 'day_name', language: 'tr' });
+	allPassed = assertEqual('normalize language', norm.language, 'tr') && allPassed;
+	allPassed = assertEqual(
+		'normalize default language',
+		normalizeSettings({ dtsegment: 'full' }).language,
+		'locale'
+	) && allPassed;
 
 	return allPassed;
 }
@@ -338,8 +393,10 @@ console.log('--- day name (issue #11) ---');
 const i = testDayName();
 console.log('--- clipboard text (issue #5) ---');
 const j = testClipboardText();
+console.log('--- language / l10n (issue #7) ---');
+const k = testLanguage();
 
-if (a && b && c && d && e && f && g && h && i && j) {
+if (a && b && c && d && e && f && g && h && i && j && k) {
 	console.log('\nAll tests passed!');
 	process.exit(0);
 } else {
