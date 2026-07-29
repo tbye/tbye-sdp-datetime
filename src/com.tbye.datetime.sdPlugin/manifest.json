@@ -31,8 +31,8 @@
 			"States": [
 				{
 					"Image": "actions/template/assets/key_icon",
-					"TitleAlignment": "middle", 
-					"FontSize": 8
+					"TitleAlignment": "middle",
+					"FontSize": 16
 				}
 			],
 			"Tooltip": "DateTime Segments Plugin",
