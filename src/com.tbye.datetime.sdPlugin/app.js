@@ -179,8 +179,10 @@ function updateTimer(context, settings) {
  * Explicit date layout (region format). Ported from PR #15 by @lupus2k.
  */
 function formatDate(d, dateformat, includeYear) {
-	const day = d.getDate().toString().padStart(2, "0");
-	const month = (d.getMonth() + 1).toString().padStart(2, "0");
+	const dayNum = d.getDate();
+	const monthNum = d.getMonth() + 1;
+	const day = dayNum.toString().padStart(2, "0");
+	const month = monthNum.toString().padStart(2, "0");
 	const year = d.getFullYear().toString();
 	switch (dateformat) {
 		case "mm_dd_yyyy":
@@ -189,6 +191,13 @@ function formatDate(d, dateformat, includeYear) {
 			return includeYear ? `${day}/${month}/${year}` : `${day}/${month}`;
 		case "yyyy_mm_dd":
 			return includeYear ? `${year}-${month}-${day}` : `${month}-${day}`;
+		// European dotted forms (issue #14): 27.3.2026 and 27.03.2026
+		case "d_m_yyyy_dot":
+			return includeYear
+				? `${dayNum}.${monthNum}.${year}`
+				: `${dayNum}.${monthNum}`;
+		case "dd_mm_yyyy_dot":
+			return includeYear ? `${day}.${month}.${year}` : `${day}.${month}`;
 		default: // "locale"
 			return includeYear
 				? d.toLocaleDateString()

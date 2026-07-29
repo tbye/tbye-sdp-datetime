@@ -142,6 +142,11 @@ function testRegionFormat() {
 	allPassed = assertEqual('formatDate dd_mm_yyyy', formatDate(d, 'dd_mm_yyyy', true), '24/06/2026') && allPassed;
 	allPassed = assertEqual('formatDate yyyy_mm_dd', formatDate(d, 'yyyy_mm_dd', true), '2026-06-24') && allPassed;
 	allPassed = assertEqual('formatDate no year mm_dd', formatDate(d, 'mm_dd_yyyy', false), '06/24') && allPassed;
+	// issue #14 — European dotted forms
+	const mar27 = new Date(2026, 2, 27, 12, 0, 0); // March 27, 2026
+	allPassed = assertEqual('formatDate d_m_yyyy_dot (#14)', formatDate(mar27, 'd_m_yyyy_dot', true), '27.3.2026') && allPassed;
+	allPassed = assertEqual('formatDate dd_mm_yyyy_dot', formatDate(mar27, 'dd_mm_yyyy_dot', true), '27.03.2026') && allPassed;
+	allPassed = assertEqual('formatDate d_m_yyyy_dot no year', formatDate(mar27, 'd_m_yyyy_dot', false), '27.3') && allPassed;
 
 	allPassed = assertEqual('formatTime 24h + sec', formatTime(d, '24', true, true), '15:04:07') && allPassed;
 	allPassed = assertEqual('formatTime 12h + sec + ampm', formatTime(d, '12', true, true), '03:04:07 PM') && allPassed;
