@@ -5,6 +5,7 @@ const {
 	formatDate,
 	formatTime,
 	normalizeSettings,
+	getClipboardText,
 	getTimeoutDelay,
 	msUntilNextSecond,
 	msUntilNextMinute,
@@ -297,10 +298,48 @@ function testDayName() {
 
 console.log('--- ISO week number (issue #13) ---');
 const h = testISOWeekNumber();
+function testClipboardText() {
+	// Issue #5: clipboard text matches the title formatting for the segment
+	let allPassed = true;
+	const d = new Date(2026, 5, 24, 15, 4, 7);
+
+	allPassed = assertEqual(
+		'clipboard minute',
+		getClipboardText('minute', d),
+		formatDateTime(d, 'minute')
+	) && allPassed;
+	allPassed = assertEqual(
+		'clipboard minute value',
+		getClipboardText('minute', d),
+		'04'
+	) && allPassed;
+	allPassed = assertEqual(
+		'clipboard time 24h',
+		getClipboardText({ dtsegment: 'time', hourformat: '24' }, d),
+		'15:04:07'
+	) && allPassed;
+	allPassed = assertEqual(
+		'clipboard date no year',
+		getClipboardText({ dtsegment: 'date_no_year', dateformat: 'yyyy_mm_dd' }, d),
+		'06-24'
+	) && allPassed;
+	// full is multi-line; clipboard keeps the newline for pasting into notes
+	const full = getClipboardText({ dtsegment: 'full', dateformat: 'yyyy_mm_dd', hourformat: '24' }, d);
+	allPassed = assertEqual(
+		'clipboard full',
+		full,
+		'2026-06-24\n15:04:07'
+	) && allPassed;
+
+	return allPassed;
+}
+
 console.log('--- day name (issue #11) ---');
 const i = testDayName();
+console.log('--- clipboard text (issue #5) ---');
+const j = testClipboardText();
 
-if (a && b && c && d && e && f && g && h && i) {
+if (a && b && c && d && e && f && g && h && i && j) {
 	console.log('\nAll tests passed!');
 	process.exit(0);
 } else {

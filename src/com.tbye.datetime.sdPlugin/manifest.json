@@ -35,8 +35,9 @@
 					"FontSize": 16
 				}
 			],
-			"Tooltip": "DateTime Segments Plugin",
+			"Tooltip": "DateTime Segments Plugin — press to copy value to clipboard",
 			"UserTitleEnabled": false,
+			"SupportedInMultiActions": true,
 			"UUID": "com.tbye.datetime.action",
 			"PropertyInspectorPath": "actions/template/property-inspector/inspector.html"
 		}

@@ -28,6 +28,7 @@ Release Notes:
 1. Choose the segments you'd like to display on the button.
 1. Optionally set **Date Format** (system default, MM/DD/YYYY, DD/MM/YYYY, YYYY-MM-DD, D.M.YYYY, or DD.MM.YYYY) and **Hour Format** (system default, 12-hour, or 24-hour).
 1. Use the Title formatting styles to style the date segment.
+1. **Press the key** to copy the current displayed value to the system clipboard (works in multi-actions too — copy here, then paste in a later step).
 
 
 ### Issues, Support and Feedback Welcome!

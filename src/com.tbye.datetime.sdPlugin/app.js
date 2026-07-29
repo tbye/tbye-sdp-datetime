@@ -55,6 +55,21 @@ if (!isNodeJS && typeof Action !== 'undefined') {
 	myAction.onDidReceiveSettings(({ action, context, device, event, payload }) => {
 		registerContext(context, payload.settings);
 	});
+
+	// Issue #5: copy the current segment value to the system clipboard on press.
+	// Works in multi-actions (copy here, then paste / type with a later step).
+	myAction.onKeyDown(({ action, context, device, event, payload }) => {
+		const settings = activeContexts[context]
+			|| normalizeSettings(payload && payload.settings);
+		const text = getClipboardText(settings, new Date());
+		copyTextToClipboard(text).then((ok) => {
+			if (ok) {
+				showOk(context);
+			} else {
+				showAlert(context);
+			}
+		});
+	});
 }
 
 /**
@@ -182,6 +197,77 @@ function onSharedTick() {
 // Prefer registerContext for new code. Accepts string or settings object.
 function updateTimer(context, settings) {
 	registerContext(context, settings);
+}
+
+/**
+ * Text placed on the clipboard for the current segment (same as key title).
+ */
+function getClipboardText(settings, d) {
+	const date = (d instanceof Date) ? d : new Date();
+	return formatDateTime(date, settings);
+}
+
+/**
+ * Copy plain text to the system clipboard.
+ * Prefers the async Clipboard API; falls back to execCommand for older CEF.
+ * @returns {Promise<boolean>} true if the write appears to have succeeded
+ */
+function copyTextToClipboard(text) {
+	const value = (text == null) ? "" : String(text);
+
+	if (typeof navigator !== 'undefined'
+		&& navigator.clipboard
+		&& typeof navigator.clipboard.writeText === 'function') {
+		return navigator.clipboard.writeText(value)
+			.then(() => true)
+			.catch(() => fallbackCopyText(value));
+	}
+	return Promise.resolve(fallbackCopyText(value));
+}
+
+function fallbackCopyText(text) {
+	if (typeof document === 'undefined') {
+		return false;
+	}
+	try {
+		const ta = document.createElement('textarea');
+		ta.value = text;
+		ta.setAttribute('readonly', '');
+		ta.style.position = 'fixed';
+		ta.style.top = '0';
+		ta.style.left = '-9999px';
+		document.body.appendChild(ta);
+		ta.focus();
+		ta.select();
+		ta.setSelectionRange(0, ta.value.length);
+		const ok = document.execCommand('copy');
+		document.body.removeChild(ta);
+		return !!ok;
+	} catch (e) {
+		return false;
+	}
+}
+
+function showOk(context) {
+	if (typeof $SD === 'undefined') {
+		return;
+	}
+	if (typeof $SD.showOk === 'function') {
+		$SD.showOk(context);
+	} else if ($SD.api && typeof $SD.api.showOk === 'function') {
+		$SD.api.showOk(context);
+	}
+}
+
+function showAlert(context) {
+	if (typeof $SD === 'undefined') {
+		return;
+	}
+	if (typeof $SD.showAlert === 'function') {
+		$SD.showAlert(context);
+	} else if ($SD.api && typeof $SD.api.showAlert === 'function') {
+		$SD.api.showAlert(context);
+	}
 }
 
 /**
@@ -409,6 +495,9 @@ if (isNodeJS) {
 		formatDate,
 		formatTime,
 		normalizeSettings,
+		getClipboardText,
+		copyTextToClipboard,
+		fallbackCopyText,
 		getTimeoutDelay,
 		msUntilNextSecond,
 		msUntilNextMinute,
