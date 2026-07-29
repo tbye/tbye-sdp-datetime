@@ -1,6 +1,9 @@
 const {
 	getOrdinalNumber,
 	formatDateTime,
+	formatDate,
+	formatTime,
+	normalizeSettings,
 	getTimeoutDelay,
 	msUntilNextSecond,
 	msUntilNextMinute,
@@ -130,6 +133,46 @@ function testMsUntilNextLocalHour() {
 	return allPassed;
 }
 
+function testRegionFormat() {
+	// Region / locale format controls from PR #15 (ported)
+	let allPassed = true;
+	const d = new Date(2026, 5, 24, 15, 4, 7); // June 24, 2026 15:04:07 local
+
+	allPassed = assertEqual('formatDate mm_dd_yyyy', formatDate(d, 'mm_dd_yyyy', true), '06/24/2026') && allPassed;
+	allPassed = assertEqual('formatDate dd_mm_yyyy', formatDate(d, 'dd_mm_yyyy', true), '24/06/2026') && allPassed;
+	allPassed = assertEqual('formatDate yyyy_mm_dd', formatDate(d, 'yyyy_mm_dd', true), '2026-06-24') && allPassed;
+	allPassed = assertEqual('formatDate no year mm_dd', formatDate(d, 'mm_dd_yyyy', false), '06/24') && allPassed;
+
+	allPassed = assertEqual('formatTime 24h + sec', formatTime(d, '24', true, true), '15:04:07') && allPassed;
+	allPassed = assertEqual('formatTime 12h + sec + ampm', formatTime(d, '12', true, true), '03:04:07 PM') && allPassed;
+	allPassed = assertEqual('formatTime 12h no sec no ampm', formatTime(d, '12', false, false), '03:04') && allPassed;
+
+	const settings = {
+		dtsegment: 'date',
+		dateformat: 'yyyy_mm_dd',
+		hourformat: '24'
+	};
+	allPassed = assertEqual(
+		'formatDateTime settings date',
+		formatDateTime(d, settings),
+		'2026-06-24'
+	) && allPassed;
+	allPassed = assertEqual(
+		'formatDateTime settings time 24',
+		formatDateTime(d, { dtsegment: 'time', dateformat: 'locale', hourformat: '24' }),
+		'15:04:07'
+	) && allPassed;
+
+	// Legacy string settings still work
+	allPassed = assertEqual('formatDateTime legacy string minute', formatDateTime(d, 'minute'), '04') && allPassed;
+
+	const norm = normalizeSettings({ dtsegment: 'time' });
+	allPassed = assertEqual('normalize default dateformat', norm.dateformat, 'locale') && allPassed;
+	allPassed = assertEqual('normalize default hourformat', norm.hourformat, 'locale') && allPassed;
+
+	return allPassed;
+}
+
 console.log('--- ordinal ---');
 const a = testGetOrdinalNumber();
 console.log('--- msUntilNextSecond ---');
@@ -142,8 +185,10 @@ console.log('--- multi-tile lockstep (issue #16) ---');
 const e = testMinuteSecondLockstep();
 console.log('--- local hour ---');
 const f = testMsUntilNextLocalHour();
+console.log('--- region format (PR #15) ---');
+const g = testRegionFormat();
 
-if (a && b && c && d && e && f) {
+if (a && b && c && d && e && f && g) {
 	console.log('\nAll tests passed!');
 	process.exit(0);
 } else {

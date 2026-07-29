@@ -14,7 +14,13 @@ const month_abbrev = [
 	"Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
 ];
 
-// Active button instances: context -> dtsegment
+const DEFAULT_SETTINGS = {
+	dtsegment: "full",
+	dateformat: "locale",
+	hourformat: "locale"
+};
+
+// Active button instances: context -> normalized settings object
 const activeContexts = {};
 let sharedTickTimeoutId = null;
 
@@ -25,13 +31,12 @@ if (!isNodeJS && typeof Action !== 'undefined') {
 	myAction = new Action('com.tbye.datetime.action');
 
 	myAction.onWillAppear(({ action, context, device, event, payload }) => {
-		const segment = (payload.settings && payload.settings.dtsegment)
-			? payload.settings.dtsegment
-			: "full";
+		const settings = normalizeSettings(payload.settings);
+		// Persist defaults when a brand-new tile has no settings yet
 		if (!payload.settings || !payload.settings.dtsegment) {
-			$SD.setSettings(context, {"dtsegment": "full"});
+			$SD.setSettings(context, settings);
 		}
-		registerContext(context, segment);
+		registerContext(context, settings);
 	});
 
 	myAction.onWillDisappear(({ context }) => {
@@ -39,22 +44,45 @@ if (!isNodeJS && typeof Action !== 'undefined') {
 	});
 
 	myAction.onDidReceiveSettings(({ action, context, device, event, payload }) => {
-		registerContext(context, payload.settings.dtsegment);
+		registerContext(context, payload.settings);
 	});
+}
+
+/**
+ * Normalize settings from a string (legacy), partial object, or full object.
+ * Region-format fields (dateformat / hourformat) contributed via PR #15.
+ */
+function normalizeSettings(settings) {
+	if (!settings) {
+		return Object.assign({}, DEFAULT_SETTINGS);
+	}
+	if (typeof settings === 'string') {
+		return {
+			dtsegment: settings,
+			dateformat: DEFAULT_SETTINGS.dateformat,
+			hourformat: DEFAULT_SETTINGS.hourformat
+		};
+	}
+	return {
+		dtsegment: settings.dtsegment || DEFAULT_SETTINGS.dtsegment,
+		dateformat: settings.dateformat || DEFAULT_SETTINGS.dateformat,
+		hourformat: settings.hourformat || DEFAULT_SETTINGS.hourformat
+	};
 }
 
 /**
  * Register (or re-register) a button context and paint it immediately
  * from the same wall clock used by every other tile.
  */
-function registerContext(context, dtsegment) {
-	if (!dtsegment) {
+function registerContext(context, settings) {
+	const normalized = normalizeSettings(settings);
+	if (!normalized.dtsegment) {
 		return;
 	}
-	activeContexts[context] = dtsegment;
+	activeContexts[context] = normalized;
 	if (!isNodeJS && typeof $SD !== 'undefined') {
 		// Immediate paint so the key isn't blank until the next tick
-		$SD.setTitle(context, formatDateTime(new Date(), dtsegment));
+		$SD.setTitle(context, formatDateTime(new Date(), normalized));
 		ensureSharedTick();
 	}
 }
@@ -132,9 +160,9 @@ function onSharedTick() {
 	const d = new Date();
 	for (let i = 0; i < contexts.length; i++) {
 		const context = contexts[i];
-		const segment = activeContexts[context];
+		const settings = activeContexts[context];
 		if (typeof $SD !== 'undefined') {
-			$SD.setTitle(context, formatDateTime(d, segment));
+			$SD.setTitle(context, formatDateTime(d, settings));
 		}
 	}
 
@@ -142,32 +170,97 @@ function onSharedTick() {
 }
 
 // Back-compat entry point used by older call sites / mental model.
-// Prefer registerContext for new code.
-function updateTimer(context, dtsegment) {
-	registerContext(context, dtsegment);
+// Prefer registerContext for new code. Accepts string or settings object.
+function updateTimer(context, settings) {
+	registerContext(context, settings);
 }
 
-function formatDateTime(d, dtsegment) {
+/**
+ * Explicit date layout (region format). Ported from PR #15 by @lupus2k.
+ */
+function formatDate(d, dateformat, includeYear) {
+	const day = d.getDate().toString().padStart(2, "0");
+	const month = (d.getMonth() + 1).toString().padStart(2, "0");
+	const year = d.getFullYear().toString();
+	switch (dateformat) {
+		case "mm_dd_yyyy":
+			return includeYear ? `${month}/${day}/${year}` : `${month}/${day}`;
+		case "dd_mm_yyyy":
+			return includeYear ? `${day}/${month}/${year}` : `${day}/${month}`;
+		case "yyyy_mm_dd":
+			return includeYear ? `${year}-${month}-${day}` : `${month}-${day}`;
+		default: // "locale"
+			return includeYear
+				? d.toLocaleDateString()
+				: d.toLocaleDateString().replace(/\/\d\d\d\d/, "");
+	}
+}
+
+/**
+ * Explicit time layout (region format). Ported from PR #15 by @lupus2k.
+ */
+function formatTime(d, hourformat, showSeconds, showAmPm) {
+	const hours24 = d.getHours();
+	const hours12 = (hours24 % 12) || 12;
+	const minutes = d.getMinutes().toString().padStart(2, "0");
+	const seconds = d.getSeconds().toString().padStart(2, "0");
+	const ampm = hours24 < 12 ? "AM" : "PM";
+
+	if (hourformat === "12") {
+		let t = `${hours12.toString().padStart(2, "0")}:${minutes}`;
+		if (showSeconds) {
+			t += `:${seconds}`;
+		}
+		if (showAmPm) {
+			t += ` ${ampm}`;
+		}
+		return t;
+	}
+	if (hourformat === "24") {
+		let t = `${hours24.toString().padStart(2, "0")}:${minutes}`;
+		if (showSeconds) {
+			t += `:${seconds}`;
+		}
+		return t;
+	}
+	// "locale"
+	let t = d.toLocaleTimeString();
+	if (!showSeconds) {
+		t = t.replace(/:\d{2}(\s+[AP]M)?$/i, "$1");
+	}
+	if (!showAmPm) {
+		t = t.replace(/\s*[AP]M$/i, "");
+	}
+	return t.trim();
+}
+
+/**
+ * Format a Date for a button title.
+ * `settings` may be a legacy segment string or a full settings object.
+ */
+function formatDateTime(d, settings) {
 	if (!(d instanceof Date)) {
 		return "";
 	}
 
+	const { dtsegment, dateformat, hourformat } = normalizeSettings(settings);
+
 	let txt = "";
 	switch (dtsegment) {
 		case "date":
-			txt = "" + d.toLocaleDateString();
+			txt = formatDate(d, dateformat, true);
 			break;
 		case "date_no_year":
-			txt = "" + d.toLocaleDateString().replace(/\/\d\d\d\d/, "");
+			txt = formatDate(d, dateformat, false);
 			break;
 		case "time":
-			txt = "" + d.toLocaleTimeString();
+			txt = formatTime(d, hourformat, true, true);
 			break;
 		case "time_no_seconds":
-			txt = "" + d.toLocaleTimeString().replace(/:\d\d /, " ");
+			txt = formatTime(d, hourformat, false, true);
 			break;
 		case "time_no_seconds_ampm":
-			txt = "" + d.toLocaleTimeString().replace(/:\d\d /, " ").replace(/ [AP]M/, "");
+			txt = formatTime(d, hourformat, false, false);
 			break;
 		case "day":
 			txt = "" + (d.getDate()).toString().padStart(2, "0");
@@ -208,7 +301,7 @@ function formatDateTime(d, dtsegment) {
 			txt = d.getHours() < 12 ? "AM" : "PM";
 			break;
 		default: // handles "full"
-			txt = "" + d.toLocaleDateString() + "\n" + d.toLocaleTimeString();
+			txt = formatDate(d, dateformat, true) + "\n" + formatTime(d, hourformat, true, true);
 			break;
 	}
 	return txt;
@@ -218,8 +311,12 @@ function formatDateTime(d, dtsegment) {
  * Delay until the next meaningful boundary for a segment.
  * Kept for tests and any future per-context scheduling; the live plugin
  * uses the shared second tick instead.
+ * Accepts a segment string or settings object.
  */
-function getTimeoutDelay(d, dtsegment) {
+function getTimeoutDelay(d, settingsOrSegment) {
+	const dtsegment = (typeof settingsOrSegment === 'string')
+		? settingsOrSegment
+		: normalizeSettings(settingsOrSegment).dtsegment;
 	const now = d.getTime();
 	switch (dtsegment) {
 		case "second":
@@ -259,6 +356,9 @@ if (isNodeJS) {
 	module.exports = {
 		getOrdinalNumber,
 		formatDateTime,
+		formatDate,
+		formatTime,
+		normalizeSettings,
 		getTimeoutDelay,
 		msUntilNextSecond,
 		msUntilNextMinute,

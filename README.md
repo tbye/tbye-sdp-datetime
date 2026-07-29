@@ -26,12 +26,18 @@ Release Notes:
 1. Drag DateTime to an available button.
 1. Click the button to show the Property Inspector.
 1. Choose the segments you'd like to display on the button.
+1. Optionally set **Date Format** (system default, MM/DD/YYYY, DD/MM/YYYY, or YYYY-MM-DD) and **Hour Format** (system default, 12-hour, or 24-hour).
 1. Use the Title formatting styles to style the date segment.
 
 
 ### Issues, Support and Feedback Welcome!
 
 Please create an [issue](https://github.com/tbye/tbye-sdp-datetime/issues/new) if there's anything I can help you with.
+
+
+### Contributors
+
+See [CONTRIBUTORS.md](CONTRIBUTORS.md) for full attribution. Thank you to everyone who has improved this plugin!
 
 
 ### Thanks
